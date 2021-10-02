@@ -1,0 +1,6 @@
+defpackage toml/value:
+  import core
+
+public deftype TomlValue:
+  String <: TomlValue
+  Int    <: TomlValue

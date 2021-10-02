@@ -1,0 +1,39 @@
+defpackage toml/test:
+  import core
+  import collections
+  import toml/parser
+  import toml/value
+
+defstruct AssertionFail <: Exception:
+  msg: String
+
+defmethod print (o: OutputStream, e: AssertionFail) -> False:
+  print(o, msg(e))
+
+defn assert_eq! (v1: Equalable, v2: Equalable) -> Void|True:
+  if not v1 == v2:
+    throw(AssertionFail(to-string("assertion failed: `%~` != `%~`" % [v1, v2])))
+  true
+
+defn test-parse-str () -> True|False:
+  val parsed = parse(\<S>title = "TOML Example"<S>) 
+  assert_eq!(length(parsed), 1)
+  assert_eq!(parsed["title"] as String, "TOML Example")
+
+defn test-parse-num () -> True|False:
+  val parsed = parse(\<S>title = 10<S>)
+  assert_eq!(length(parsed), 1)
+  assert_eq!(parsed["title"] as Int, 10)
+
+val TESTS = ["test-parse-str" => test-parse-str, "test-parse-num" => test-parse-num]
+val PASSES = reduce{_, 0, TESTS} $
+  fn (passes, test):
+    label<Int> return:
+      try:
+        if value(test)():
+          return(passes + 1)
+      catch (e:Exception):
+        println("TEST FAIL: %_: %~" % [key(test), e])
+      passes
+
+println("TESTS PASSED: %_ out of %_" % [PASSES, length(TESTS)])

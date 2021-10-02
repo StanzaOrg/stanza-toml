@@ -1,0 +1,97 @@
+defpackage toml/parser:
+  import core
+  import collections
+  import toml/value
+
+defstruct Parser:
+  content: String
+  position: Int with: (setter => set-position)
+  table: HashTable<String, TomlValue>
+
+defn peek (parser: Parser) -> Maybe<Char>:
+  val position = position(parser)
+  val content = content(parser)
+  if position >= length(content):
+    None()
+  else:
+    One(content[position])
+
+defn at-end (parser: Parser) -> True|False:
+  position(parser) >= length(content(parser))
+
+defn advance (parser: Parser) -> False:
+  set-position(parser, position(parser) + 1)
+
+defn add-entry (parser: Parser, entry: KeyValue<String, TomlValue>) -> False:
+  table(parser)[key(entry)] = value(entry)
+
+defn skip-whitespace (parser: Parser) -> False:
+  while peek(parser) == One(' '):
+    advance(parser)
+
+defn expect (parser: Parser, value: Char) -> False|Void:
+  if peek(parser) == One(value):
+    advance(parser)
+  else:
+    fatal("Expected: `%~`\nGot: `%~`" % [value, peek(parser)])
+
+defn take-while (parser: Parser, pred: (Char -> True|False)) -> String:
+  var ret = ""
+  var next: Maybe<Char> = None()
+  defn* loop ():
+    next = peek(parser)
+    if next is-not None:
+      val value = value!(next)
+      if pred(value):
+        ret = append(ret, to-string(value))
+        advance(parser)
+        loop()
+    ret
+  loop()
+
+defn is-ascii (c: Char) -> True|False:
+  ('a' <= c and c <= 'z') or
+    ('A' <= c and c <= 'Z')
+
+defn is-digit (c: Char) -> True|False:
+  '0' <= c and c <= '9'
+
+defn parse-string (parser: Parser) -> String:
+  expect(parser, '"')
+
+  val value = take-while(parser, {_ != '"'})
+  expect(parser, '"')
+
+  value
+
+defn parse-integer (parser: Parser) -> Int:
+  to-int!(take-while(parser, {is-digit(_)}))
+
+defn parse-key-value (parser: Parser) -> False:
+  skip-whitespace(parser)
+
+  val key = take-while(parser, {is-ascii(_)})
+
+  skip-whitespace(parser)
+  expect(parser, '=')
+  skip-whitespace(parser)
+
+  val c = peek(parser)
+  val value =
+    if c == One('"'):
+      parse-string(parser)
+    else if c is-not None and is-digit(value!(c)):
+      parse-integer(parser)
+    else:
+      fatal("Unexpected %~" % [c])
+
+  if not (at-end(parser) or peek(parser) == '\n'):
+    fatal("Expected EOF or newline, got: %~" % [peek(parser)])
+
+  add-entry(parser, key => value)
+
+public defn parse (content: String) -> HashTable<String, TomlValue>:
+  val parser = Parser(content, 0, HashTable<String, TomlValue>())
+  while not at-end(parser) :
+    parse-key-value(parser)
+  table(parser)

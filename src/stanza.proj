@@ -1,0 +1,3 @@
+package toml/parser defined-in "parser.stanza"
+package toml/value  defined-in "value.stanza"
+package toml/test   defined-in "test.stanza"

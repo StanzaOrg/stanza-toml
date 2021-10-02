@@ -1,0 +1,19 @@
+defpackage read:
+  import core
+
+defn slurp (i: InputStream) -> String:
+  val buffer = StringBuffer()
+  defn* loop ():
+    val c = get-char(i)
+    match(c:Char):
+      add(buffer, c)
+      loop()
+    else:
+      to-string(buffer)
+  loop()
+
+defn main ():
+  val process = Process("echo", ["echo", "hello, world!"], PROCESS-IN, PROCESS-OUT, PROCESS-ERR)
+  print(slurp(output-stream(process)))
+
+main()
