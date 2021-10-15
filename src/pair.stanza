@@ -1,0 +1,15 @@
+defpackage toml/pair:
+  import core
+  import toml/value
+  import toml/table
+
+public defstruct TomlPair:
+  key: String
+  value: TomlValue
+
+defmethod print (o: OutputStream, p: TomlPair) -> False:
+  match(value(p): TomlTable):
+    println(o, "[%_]" % [key(p)])
+    print(o, "%~" % [value(p)])
+  else:
+    print(o, "%_ = %~" % [key(p), value(p)])

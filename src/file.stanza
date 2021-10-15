@@ -1,0 +1,21 @@
+defpackage toml/file:
+  import core
+  import collections
+  import toml/value
+  import toml/pair
+  import toml/table
+
+public deftype TomlFile <: Seqable<KeyValue<String, TomlValue>>
+public defmulti table (f: TomlFile) -> TomlTable
+
+public defn TomlFile (pairs: Seqable<KeyValue<String, TomlValue>>):
+  val table = TomlTable(pairs)
+  new TomlFile:
+    defmethod table (this) -> TomlTable:
+      table
+
+defmethod to-seq (f: TomlFile) -> Seq<KeyValue<String, TomlValue>>:
+  to-seq(table(f))
+
+defmethod print (o: OutputStream, f: TomlFile) -> False:
+  print(o, table(f))

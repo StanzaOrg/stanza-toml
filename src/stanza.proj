@@ -1,3 +1,6 @@
+package toml/file   defined-in "file.stanza"
+package toml/pair   defined-in "pair.stanza"
 package toml/parser defined-in "parser.stanza"
-package toml/value  defined-in "value.stanza"
+package toml/table  defined-in "table.stanza"
 package toml/test   defined-in "test.stanza"
+package toml/value  defined-in "value.stanza"

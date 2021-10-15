@@ -2,7 +2,5 @@ include "src/stanza.proj"
 
 build test:
   inputs:
-    toml/parser
-    toml/value
     toml/test
   o: "build/test"

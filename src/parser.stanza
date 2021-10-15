@@ -2,11 +2,14 @@ defpackage toml/parser:
   import core
   import collections
   import toml/value
+  import toml/file
+  import toml/pair
+  import toml/table
 
 defstruct Parser:
   content: String
   position: Int with: (setter => set-position)
-  table: HashTable<String, TomlValue>
+  table: TomlTable
 
 defn peek (parser: Parser) -> Maybe<Char>:
   val position = position(parser)
@@ -22,8 +25,11 @@ defn at-end (parser: Parser) -> True|False:
 defn advance (parser: Parser) -> False:
   set-position(parser, position(parser) + 1)
 
-defn add-entry (parser: Parser, entry: KeyValue<String, TomlValue>) -> False:
-  table(parser)[key(entry)] = value(entry)
+defn add-entry (parser: Parser, key: String, value: TomlValue) -> False:
+  insert(table(parser), key => value)
+
+defn add-entry (parser: Parser, entry: TomlPair) -> False:
+  insert(table(parser), key(entry) => value(entry))
 
 defn skip-whitespace (parser: Parser) -> False:
   while peek(parser) == One(' '):
@@ -36,7 +42,7 @@ defn expect (parser: Parser, value: Char) -> False|Void:
     fatal("Expected: `%~`\nGot: `%~`" % [value, peek(parser)])
 
 defn take-while (parser: Parser, pred: (Char -> True|False)) -> String:
-  var ret = ""
+  var ret = String("")
   var next: Maybe<Char> = None()
   defn* loop ():
     next = peek(parser)
@@ -65,12 +71,28 @@ defn parse-string (parser: Parser) -> String:
   value
 
 defn parse-integer (parser: Parser) -> Int:
-  to-int!(take-while(parser, {is-digit(_)}))
+  to-int!(take-while(parser, is-digit))
 
-defn parse-key-value (parser: Parser) -> False:
+defn parse-table (parser: Parser) -> TomlPair:
+  expect(parser, '[')
+  val name = take-while(parser, is-ascii)
+  if length(name) == 0:
+    fatal("Expected table name, got: `%~`" % [peek(parser)])
+  expect(parser, ']')
+
+  val table = TomlTable()
+  while peek(parser) != None():
+    val kv = parse-key-value(parser)
+    insert(table, key(kv) => value(kv))
+
+  TomlPair(name, table)
+
+defn parse-key-value (parser: Parser) -> TomlPair:
   skip-whitespace(parser)
 
-  val key = take-while(parser, {is-ascii(_)})
+  val key = take-while(parser, is-ascii)
+  if length(key) == 0:
+    fatal("Expected key, got: `%~`" % [peek(parser)])
 
   skip-whitespace(parser)
   expect(parser, '=')
@@ -85,13 +107,18 @@ defn parse-key-value (parser: Parser) -> False:
     else:
       fatal("Unexpected %~" % [c])
 
-  if not (at-end(parser) or peek(parser) == '\n'):
+  if not (at-end(parser) or peek(parser) == One('\n')):
     fatal("Expected EOF or newline, got: %~" % [peek(parser)])
 
-  add-entry(parser, key => value)
+  advance(parser)
 
-public defn parse (content: String) -> HashTable<String, TomlValue>:
-  val parser = Parser(content, 0, HashTable<String, TomlValue>())
+  TomlPair(key, value)
+
+public defn parse-file (content: String) -> TomlFile:
+  val parser = Parser(content, 0, TomlTable())
   while not at-end(parser) :
-    parse-key-value(parser)
-  table(parser)
+    if peek(parser) == One('['):
+      add-entry(parser, parse-table(parser))
+    else:
+      add-entry(parser, parse-key-value(parser))
+  TomlFile(table(parser))

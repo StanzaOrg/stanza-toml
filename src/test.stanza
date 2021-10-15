@@ -1,8 +1,10 @@
 defpackage toml/test:
   import core
   import collections
+  import toml/table
   import toml/parser
   import toml/value
+  import toml/file
 
 defstruct AssertionFail <: Exception:
   msg: String
@@ -10,22 +12,53 @@ defstruct AssertionFail <: Exception:
 defmethod print (o: OutputStream, e: AssertionFail) -> False:
   print(o, msg(e))
 
-defn assert_eq! (v1: Equalable, v2: Equalable) -> Void|True:
+defn assert-eq! (v1: Equalable, v2: Equalable) -> Void|True:
   if not v1 == v2:
     throw(AssertionFail(to-string("assertion failed: `%~` != `%~`" % [v1, v2])))
   true
 
 defn test-parse-str () -> True|False:
-  val parsed = parse(\<S>title = "TOML Example"<S>) 
-  assert_eq!(length(parsed), 1)
-  assert_eq!(parsed["title"] as String, "TOML Example")
+  val table = table(parse-file(\<S>title = "TOML Example"<S>))
+  assert-eq!(length(entries(table)), 1)
+  assert-eq!(get(table, "title") as String, "TOML Example")
 
 defn test-parse-num () -> True|False:
-  val parsed = parse(\<S>title = 10<S>)
-  assert_eq!(length(parsed), 1)
-  assert_eq!(parsed["title"] as Int, 10)
+  val table = table(parse-file(\<S>title = 10<S>))
+  assert-eq!(length(entries(table)), 1)
+  assert-eq!(get(table, "title") as Int, 10)
 
-val TESTS = ["test-parse-str" => test-parse-str, "test-parse-num" => test-parse-num]
+defn test-to-string () -> True|False:
+  val table = TomlTable $ to-hashtable<String, TomlValue> $ ["name" => "foo"]
+  assert-eq!(to-string(table), "name = \"foo\"\n")
+
+  val file = TomlFile(table)
+  assert-eq!(to-string(file), "name = \"foo\"\n")
+
+defn test-ser-deser () -> True|False:
+  val file = parse-file("title = \"foo\"\nversion = 10\n")
+  assert-eq!(to-string(file), "title = \"foo\"\nversion = 10\n")
+
+defn test-table () -> True|False:
+  val table = TomlTable $ [
+    "foo" => "bar",
+    "dependencies" => TomlTable $ [
+      "stanza-toml" => "git@github.com:tylanphear/stanza-toml",
+      "poet"        => "git@github.com:tylanphear/poet"
+    ]
+  ]
+  assert-eq!(to-string(table), "\
+    foo = \"bar\"\n\
+    [dependencies]\n\
+    stanza-toml = \"git@github.com:tylanphear/stanza-toml\"\n\
+    poet = \"git@github.com:tylanphear/poet\"\n")
+
+val TESTS = [
+  "test-parse-str" => test-parse-str,
+  "test-parse-num" => test-parse-num,
+  "test-to-string" => test-to-string,
+  "test-ser-deser" => test-ser-deser,
+  "test-table"     => test-table,
+]
 val PASSES = reduce{_, 0, TESTS} $
   fn (passes, test):
     label<Int> return:

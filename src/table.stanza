@@ -1,0 +1,47 @@
+defpackage toml/table:
+  import core
+  import collections
+  import toml/value
+  import toml/pair
+
+public deftype TomlTable <: TomlValue & Seqable<KeyValue<String, TomlValue>>
+public defmulti entries (t: TomlTable) -> Vector<KeyValue<String, TomlValue>>
+public defmulti get (t: TomlTable, k: String) -> TomlValue
+public defmulti insert (t: TomlTable, entry: KeyValue<String, TomlValue>) -> False
+
+public defn TomlTable ():
+  val key-indexes = HashTable<String, Int>()
+  val entries = Vector<KeyValue<String, TomlValue>>()
+
+  new TomlTable:
+    defmethod insert (this, entry: KeyValue<String, TomlValue>) -> False:
+      if contains?(key-indexes, key(entry)):
+        fatal("key `%_` already exists in table" % [key(entry)])
+
+      val index = length(entries)
+      add(entries, entry)
+      key-indexes[key(entry)] = index
+
+    defmethod get (this, key: String) -> TomlValue:
+      value(entries[key-indexes[key]])
+
+    defmethod entries (this) -> Vector<KeyValue<String, TomlValue>>:
+      entries
+
+    defmethod to-seq (this) -> Seq<KeyValue<String, TomlValue>>:
+      to-seq(entries)
+
+public defn TomlTable (pairs: Seqable<KeyValue<String, TomlValue>>):
+  val table = TomlTable()
+  for pair in pairs do:
+    insert(table, pair)
+  table
+
+defmethod print (o: OutputStream, f: TomlTable) -> False:
+  defn print-kv (kv: KeyValue<String, TomlValue>) -> False:
+    match(value(kv): TomlTable):
+      println(o, "[%_]" % [key(kv)])
+      print(o, "%~" % [value(kv)])
+    else:
+      println(o, "%_ = %~" % [key(kv), value(kv)])
+  do(print-kv, entries(f))
