@@ -6,24 +6,46 @@ defpackage toml/parser:
   import toml/pair
   import toml/table
 
+defstruct ParsePosition:
+  offset: Int
+  line: Int
+  column: Int
+
+defn ParsePosition ():
+  ParsePosition(0, 1, 1)
+
 defstruct Parser:
   content: String
-  position: Int with: (setter => set-position)
+  position: ParsePosition with: (setter => set-position)
   table: TomlTable
 
 defn peek (parser: Parser) -> Maybe<Char>:
-  val position = position(parser)
+  val offset = offset(position(parser))
   val content = content(parser)
-  if position >= length(content):
+  if offset >= length(content):
     None()
   else:
-    One(content[position])
+    One(content[offset])
+
+defn error (parser: Parser, msg: Printable) -> Void:
+  val pos = position(parser)
+  fatal("[%~:%~]: error: %~" % [line(pos), column(pos), msg])
+
+defn error (parser: Parser, msg: String) -> Void:
+  error(parser, "%_" % [msg])
 
 defn at-end (parser: Parser) -> True|False:
-  position(parser) >= length(content(parser))
+  offset(position(parser)) >= length(content(parser))
 
 defn advance (parser: Parser) -> False:
-  set-position(parser, position(parser) + 1)
+  val old-position = position(parser)
+  val offset = offset(old-position)
+  var line = line(old-position)
+  var column = column(old-position)
+  if peek(parser) == One('\n'):
+    line = line + 1
+    column = 1
+  set-position(parser, ParsePosition(offset + 1, line, column))
 
 defn add-entry (parser: Parser, key: String, value: TomlValue) -> False:
   insert(table(parser), key => value)
@@ -32,28 +54,40 @@ defn add-entry (parser: Parser, entry: TomlPair) -> False:
   insert(table(parser), key(entry) => value(entry))
 
 defn skip-whitespace (parser: Parser) -> False:
-  while peek(parser) == One(' '):
-    advance(parser)
+  take-while(parser, is-whitespace)
+  false
 
 defn expect (parser: Parser, value: Char) -> False|Void:
   if peek(parser) == One(value):
     advance(parser)
   else:
-    fatal("Expected: `%~`\nGot: `%~`" % [value, peek(parser)])
+    error(parser, "Expected: `%~`\nGot: `%~`" % [value, peek(parser)])
 
-defn take-while (parser: Parser, pred: (Char -> True|False)) -> String:
-  var ret = String("")
-  var next: Maybe<Char> = None()
-  defn* loop ():
-    next = peek(parser)
-    if next is-not None:
-      val value = value!(next)
-      if pred(value):
-        ret = append(ret, to-string(value))
+defn take-while (parser: Parser, pred: Char -> True|False) -> String:
+  defn next () -> String :
+    and-then?(peek(parser), fn (c):
+      if pred(c):
         advance(parser)
-        loop()
-    ret
-  loop()
+        One(append(String([c]), next()))
+      else:
+        None()
+    ) $> unwrap-or?{_, ""}
+  next()
+
+defn map?<?T, ?R> (v?: Maybe<?T>, f: T -> ?R) -> Maybe<R>:
+  match(v?):
+    (v: One<T>): One(f(value!(v)))
+    (_: None): None()
+
+defn and-then?<?T, ?R> (v?: Maybe<?T>, f: T -> Maybe<?R>) -> Maybe<R>:
+  match(v?):
+    (v: One<T>): f(value!(v))
+    (_: None): None()
+
+defn unwrap-or?<?T> (v?: Maybe<?T>, default: T) -> T:
+  match(v?):
+    (v: One<T>): value!(v)
+    (_: None): default
 
 defn is-ascii (c: Char) -> True|False:
   ('a' <= c and c <= 'z') or
@@ -61,6 +95,12 @@ defn is-ascii (c: Char) -> True|False:
 
 defn is-digit (c: Char) -> True|False:
   '0' <= c and c <= '9'
+
+defn is-identifier (c: Char) -> True|False:
+  is-ascii(c) or c == '-'
+
+defn is-whitespace (c: Char) -> True|False:
+  c == ' ' or c == '\n'
 
 defn parse-string (parser: Parser) -> String:
   expect(parser, '"')
@@ -75,10 +115,11 @@ defn parse-integer (parser: Parser) -> Int:
 
 defn parse-table (parser: Parser) -> TomlPair:
   expect(parser, '[')
-  val name = take-while(parser, is-ascii)
+  val name = take-while(parser, is-identifier)
   if length(name) == 0:
-    fatal("Expected table name, got: `%~`" % [peek(parser)])
+    error(parser, "Expected table name, got: `%~`" % [peek(parser)])
   expect(parser, ']')
+  expect(parser, '\n')
 
   val table = TomlTable()
   while peek(parser) != None():
@@ -90,9 +131,9 @@ defn parse-table (parser: Parser) -> TomlPair:
 defn parse-key-value (parser: Parser) -> TomlPair:
   skip-whitespace(parser)
 
-  val key = take-while(parser, is-ascii)
+  val key = take-while(parser, is-identifier)
   if length(key) == 0:
-    fatal("Expected key, got: `%~`" % [peek(parser)])
+    error(parser, "Expected key, got: `%~`" % [peek(parser)])
 
   skip-whitespace(parser)
   expect(parser, '=')
@@ -105,20 +146,29 @@ defn parse-key-value (parser: Parser) -> TomlPair:
     else if c is-not None and is-digit(value!(c)):
       parse-integer(parser)
     else:
-      fatal("Unexpected %~" % [c])
+      error(parser, "Unexpected %~" % [c])
 
   if not (at-end(parser) or peek(parser) == One('\n')):
-    fatal("Expected EOF or newline, got: %~" % [peek(parser)])
+    error(parser, "Expected EOF or newline, got: %~" % [peek(parser)])
 
   advance(parser)
 
   TomlPair(key, value)
 
 public defn parse-file (content: String) -> TomlFile:
-  val parser = Parser(content, 0, TomlTable())
+  val parser = Parser(content, ParsePosition(), TomlTable())
   while not at-end(parser) :
-    if peek(parser) == One('['):
-      add-entry(parser, parse-table(parser))
-    else:
-      add-entry(parser, parse-key-value(parser))
+    match(peek(parser)):
+      (v: One<Char>):
+        val c = value!(v)
+        if c == '[':
+          add-entry(parser, parse-table(parser))
+        else if is-whitespace(c):
+          skip-whitespace(parser)
+        else if is-identifier(c):
+          add-entry(parser, parse-key-value(parser))
+        else:
+          error(parser, "Unexpected character: '%_'" % [c])
+      (_):
+        error(parser, "Unexpected EOF")
   TomlFile(table(parser))

@@ -7,6 +7,7 @@ defpackage toml/table:
 public deftype TomlTable <: TomlValue & Seqable<KeyValue<String, TomlValue>>
 public defmulti entries (t: TomlTable) -> Vector<KeyValue<String, TomlValue>>
 public defmulti get (t: TomlTable, k: String) -> TomlValue
+public defmulti get? (t: TomlTable, k: String) -> TomlValue|False
 public defmulti insert (t: TomlTable, entry: KeyValue<String, TomlValue>) -> False
 
 public defn TomlTable ():
@@ -23,7 +24,14 @@ public defn TomlTable ():
       key-indexes[key(entry)] = index
 
     defmethod get (this, key: String) -> TomlValue:
-      value(entries[key-indexes[key]])
+      get?(this, key) as TomlValue
+
+    defmethod get? (this, key: String) -> TomlValue|False:
+      val index = get?(key-indexes, key)
+      match(index: Int):
+        value(entries[index])
+      else:
+        false
 
     defmethod entries (this) -> Vector<KeyValue<String, TomlValue>>:
       entries

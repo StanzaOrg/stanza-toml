@@ -38,7 +38,7 @@ defn test-ser-deser () -> True|False:
   val file = parse-file("title = \"foo\"\nversion = 10\n")
   assert-eq!(to-string(file), "title = \"foo\"\nversion = 10\n")
 
-defn test-table () -> True|False:
+defn test-table-to-string () -> True|False:
   val table = TomlTable $ [
     "foo" => "bar",
     "dependencies" => TomlTable $ [
@@ -52,12 +52,22 @@ defn test-table () -> True|False:
     stanza-toml = \"git@github.com:tylanphear/stanza-toml\"\n\
     poet = \"git@github.com:tylanphear/poet\"\n")
 
+defn test-table-parse () -> True|False:
+  val toml = table $ parse-file $ "\
+  foo = \"bar\"\n\
+  [dependencies]\n\
+  stanza-toml = \"git@github.com:tylanphear/stanza-toml\"\n\
+  poet = \"git@github.com:tylanphear/poet\"\n"
+  assert-eq!(get(toml, "foo") as String, "bar")
+  assert-eq!(get(get(toml, "dependencies") as TomlTable, "stanza-toml") as String, "git@github.com:tylanphear/stanza-toml")
+
 val TESTS = [
   "test-parse-str" => test-parse-str,
   "test-parse-num" => test-parse-num,
   "test-to-string" => test-to-string,
   "test-ser-deser" => test-ser-deser,
-  "test-table"     => test-table,
+  "test-table-to-string" => test-table-to-string,
+  "test-table-parse" => test-table-parse,
 ]
 val PASSES = reduce{_, 0, TESTS} $
   fn (passes, test):
