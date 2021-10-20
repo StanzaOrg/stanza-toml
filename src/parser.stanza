@@ -47,12 +47,6 @@ defn advance (parser: Parser) -> False:
     column = 1
   set-position(parser, ParsePosition(offset + 1, line, column))
 
-defn add-entry (parser: Parser, key: String, value: TomlValue) -> False:
-  insert(table(parser), key => value)
-
-defn add-entry (parser: Parser, entry: TomlPair) -> False:
-  insert(table(parser), key(entry) => value(entry))
-
 defn skip-whitespace (parser: Parser) -> False:
   take-while(parser, is-whitespace)
   false
@@ -113,7 +107,7 @@ defn parse-string (parser: Parser) -> String:
 defn parse-integer (parser: Parser) -> Int:
   to-int!(take-while(parser, is-digit))
 
-defn parse-table (parser: Parser) -> TomlPair:
+defn parse-table (parser: Parser) -> KeyValue<String, TomlTable>:
   expect(parser, '[')
   val name = take-while(parser, is-identifier)
   if length(name) == 0:
@@ -123,12 +117,11 @@ defn parse-table (parser: Parser) -> TomlPair:
 
   val table = TomlTable()
   while peek(parser) != None():
-    val kv = parse-key-value(parser)
-    insert(table, key(kv) => value(kv))
+    parse-table-inner(parser, table)
 
-  TomlPair(name, table)
+  name => table
 
-defn parse-key-value (parser: Parser) -> TomlPair:
+defn parse-key-value (parser: Parser) -> KeyValue<String, TomlValue>:
   skip-whitespace(parser)
 
   val key = take-while(parser, is-identifier)
@@ -153,22 +146,25 @@ defn parse-key-value (parser: Parser) -> TomlPair:
 
   advance(parser)
 
-  TomlPair(key, value)
+  key => value
 
-public defn parse-file (content: String) -> TomlFile:
-  val parser = Parser(content, ParsePosition(), TomlTable())
+defn parse-table-inner (parser: Parser, table: TomlTable) -> False:
   while not at-end(parser) :
     match(peek(parser)):
       (v: One<Char>):
         val c = value!(v)
         if c == '[':
-          add-entry(parser, parse-table(parser))
+          insert(table, parse-table(parser))
         else if is-whitespace(c):
           skip-whitespace(parser)
         else if is-identifier(c):
-          add-entry(parser, parse-key-value(parser))
+          insert(table, parse-key-value(parser))
         else:
           error(parser, "Unexpected character: '%_'" % [c])
       (_):
         error(parser, "Unexpected EOF")
+
+public defn parse-file (content: String) -> TomlFile:
+  val parser = Parser(content, ParsePosition(), TomlTable())
+  parse-table-inner(parser, table(parser))
   TomlFile(table(parser))
