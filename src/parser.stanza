@@ -1,6 +1,7 @@
 defpackage toml/parser:
   import core
   import collections
+  import maybe-utils
   import toml/value
   import toml/file
   import toml/pair
@@ -59,29 +60,16 @@ defn expect (parser: Parser, value: Char) -> False|Void:
 
 defn take-while (parser: Parser, pred: Char -> True|False) -> String:
   defn next () -> String :
-    and-then?(peek(parser), fn (c):
-      if pred(c):
-        advance(parser)
-        One(append(String([c]), next()))
-      else:
-        None()
-    ) $> unwrap-or?{_, ""}
+    peek(parser)
+      $> and-then{_, fn (c):
+        if pred(c):
+          advance(parser)
+          One(append(String([c]), next()))
+        else:
+          None()
+      }
+      $> value-or{_, ""}
   next()
-
-defn map?<?T, ?R> (v?: Maybe<?T>, f: T -> ?R) -> Maybe<R>:
-  match(v?):
-    (v: One<T>): One(f(value!(v)))
-    (_: None): None()
-
-defn and-then?<?T, ?R> (v?: Maybe<?T>, f: T -> Maybe<?R>) -> Maybe<R>:
-  match(v?):
-    (v: One<T>): f(value!(v))
-    (_: None): None()
-
-defn unwrap-or?<?T> (v?: Maybe<?T>, default: T) -> T:
-  match(v?):
-    (v: One<T>): value!(v)
-    (_: None): default
 
 defn is-ascii (c: Char) -> True|False:
   ('a' <= c and c <= 'z') or
