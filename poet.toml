@@ -1,0 +1,5 @@
+version = "0.0.1"
+name = "stanza-toml"
+[dependencies]
+
+maybe-utils = "git@github.com:tylanphear/maybe-utils"
