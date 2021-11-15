@@ -78,10 +78,12 @@ public defn TomlTable (pairs: Seqable<KeyValue<String, TomlValue>>):
   table
 
 defmethod print (o: OutputStream, f: TomlTable) -> False:
+  var first? = true
   defn print-kv (kv: KeyValue<String, TomlValue>) -> False:
+    val print* = print when first? else lnprint
     match(value(kv): TomlTable):
-      println(o, "[%_]" % [key(kv)])
-      print(o, "%~" % [value(kv)])
+      print*(o, "%_.%~" % [key(kv), value(kv)])
     else:
-      println(o, "%_ = %~" % [key(kv), value(kv)])
+      print*(o, "%_ = %~" % [key(kv), value(kv)])
+    first? = false
   do(print-kv, entries(f))
