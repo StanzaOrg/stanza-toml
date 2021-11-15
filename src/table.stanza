@@ -34,9 +34,16 @@ public defn TomlTable ():
       val components = to-tuple(split(key(entry), ".", 2))
       if length(components) == 2:
         val first-component = components[0]
-        val first-table = TomlTable()
-        insert(first-table, components[1] => value(entry))
-        set-entry(first-component, first-table)
+        match(get-entry(first-component)):
+          (first-table: TomlValue):
+            match(first-table: TomlTable):
+              insert(first-table, components[1] => value(entry))
+            else:
+              fatal("key `%_` is not a table" % [key])
+          (_: False):
+            val first-table = TomlTable()
+            insert(first-table, components[1] => value(entry))
+            set-entry(first-component, first-table)
       else:
         set-entry(key(entry), value(entry))
 

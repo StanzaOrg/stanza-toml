@@ -55,9 +55,13 @@ deftest multiple-tables:
   #EXPECT(toml["b.foo"] as String == "bar")
 
 deftest dotted-key-value:
-  val toml = table $ parse-file $ "foo.bar.baz = 10\n"
+  val toml = table $ parse-file $ dedent $ \<>
+    foo.bar.baz = 10
+    foo.bar.bang = "20"
+  <>
   #EXPECT(toml["foo"] is TomlTable)
   #EXPECT(toml["foo.bar.baz"] as Int == 10)
+  #EXPECT(toml["foo.bar.bang"] as String == "20")
 
 deftest dotted-key-value-in-table:
   val toml = table $ parse-file $ dedent $ \<>
