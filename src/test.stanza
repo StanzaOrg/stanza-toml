@@ -61,7 +61,12 @@ deftest dotted-key-value:
 
 deftest dotted-key-value-in-table:
   val toml = table $ parse-file $ dedent $ \<>
-    [foo]
-    bar.baz = "Hello, world!"
+    [foo.bar]
+    baz.bang = "Hello, world!"
   <>
-  #EXPECT(toml["foo.bar.baz"] as String == "Hello, world!")
+  #EXPECT(toml["foo.bar.baz.bang"] as String == "Hello, world!")
+
+deftest inline-table:
+  val toml = table $ parse-file $ "foo = { bar = { baz = 10, bang = \"hello\" } }\n"
+  #EXPECT(toml["foo.bar.baz"] as Int == 10)
+  #EXPECT(toml["foo.bar.bang"] as String == "hello")

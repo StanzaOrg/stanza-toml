@@ -40,10 +40,9 @@ defn at-end (parser: Parser) -> True|False:
   offset(position(parser)) >= length(content(parser))
 
 defn advance (parser: Parser) -> False:
-  val old-position = position(parser)
-  val offset = offset(old-position)
-  var line = line(old-position)
-  var column = column(old-position)
+  val offset = offset(position(parser))
+  var line = line(position(parser))
+  var column = column(position(parser))
   if peek(parser) == One('\n'):
     line = line + 1
     column = 1
@@ -86,19 +85,17 @@ defn parse-integer (parser: Parser) -> Int:
 defn parse-table (parser: Parser) -> KeyValue<String, TomlTable>:
   debug("trace: parse-table")
   expect(parser, '[')
-  val name = take-while(parser, is-identifier)
-  if length(name) == 0:
-    error(parser, "Expected table name, got: `%~`" % [peek(parser)])
+  val key = parse-key(parser)
   expect(parser, ']')
   expect(parser, '\n')
 
   val table = TomlTable()
   parse-table-inner(parser, table, false)
 
-  name => table
+  key => table
 
-defn parse-identifer (parser: Parser) -> String:
-  debug("trace: parse-identifer")
+defn parse-identifier (parser: Parser) -> String:
+  debug("trace: parse-identifier")
   val key = take-while(parser, is-identifier)
   if length(key) == 0:
     error(parser, "Expected key, got: `%~`" % [peek(parser)])
@@ -107,12 +104,35 @@ defn parse-identifer (parser: Parser) -> String:
 defn parse-key (parser: Parser) -> String:
   debug("trace: parse-key")
   val ident = StringBuffer()
-  print(ident, parse-identifer(parser))
+  print(ident, parse-identifier(parser))
   while peek(parser) == One('.'):
     advance(parser)
     print(ident, '.')
-    print(ident, parse-identifer(parser))
+    print(ident, parse-identifier(parser))
   to-string(ident)
+
+defn parse-inline-table (parser: Parser) -> TomlTable:
+  debug("trace: parse-inline-table")
+  expect(parser, '{')
+  skip-whitespace(parser)
+  if peek(parser) == One('}'):
+    TomlTable()
+  else:
+    val table = TomlTable()
+    insert(table, parse-key-value(parser))
+    let loop ():
+      skip-whitespace(parser)
+      if peek(parser) == One('}'):
+        advance(parser)
+        table
+      else if peek(parser) == One(','):
+        advance(parser)
+        insert(table, parse-key-value(parser))
+        loop()
+      else if peek(parser) is One:
+        error(parser, "Unexpected %~" % [value!(peek(parser))])
+      else:
+        error(parser, "Unexpected EOF!")
 
 defn parse-key-value (parser: Parser) -> KeyValue<String, TomlValue>:
   debug("trace: parse-key-value")
@@ -128,12 +148,12 @@ defn parse-key-value (parser: Parser) -> KeyValue<String, TomlValue>:
   val value =
     if c == One('"'):
       parse-string(parser)
+    else if c == One('{'):
+      parse-inline-table(parser)
     else if c is-not None and is-digit(value!(c)):
       parse-integer(parser)
     else:
       error(parser, "Unexpected %~" % [c])
-
-  expect(parser, '\n')
 
   key => value
 
@@ -153,6 +173,7 @@ defn parse-table-inner (parser: Parser, table: TomlTable, root?: True|False) -> 
             skip-whitespace(parser)
           else if is-identifier(c):
             insert(table, parse-key-value(parser))
+            expect(parser, '\n')
           else:
             error(parser, "Unexpected character: '%_'" % [c])
         (_):
