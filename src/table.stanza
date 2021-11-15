@@ -14,24 +14,49 @@ public defn TomlTable ():
   val key-indexes = HashTable<String, Int>()
   val entries = Vector<KeyValue<String, TomlValue>>()
 
+  defn set-entry (key: String, value: TomlValue) -> False:
+    val index = length(entries)
+    add(entries, key => value)
+    key-indexes[key] = index
+
+  defn get-entry (key: String) -> TomlValue|False:
+    val index = get?(key-indexes, key)
+    match(index: Int):
+      value(entries[index])
+    else:
+      false
+
   new TomlTable:
     defmethod insert (this, entry: KeyValue<String, TomlValue>) -> False:
       if contains?(key-indexes, key(entry)):
         fatal("key `%_` already exists in table" % [key(entry)])
 
-      val index = length(entries)
-      add(entries, entry)
-      key-indexes[key(entry)] = index
+      val components = to-tuple(split(key(entry), ".", 2))
+      if length(components) == 2:
+        val first-component = components[0]
+        val first-table = TomlTable()
+        insert(first-table, components[1] => value(entry))
+        set-entry(first-component, first-table)
+      else:
+        set-entry(key(entry), value(entry))
 
     defmethod get (this, key: String) -> TomlValue:
       get?(this, key) as TomlValue
 
     defmethod get? (this, key: String) -> TomlValue|False:
-      val index = get?(key-indexes, key)
-      match(index: Int):
-        value(entries[index])
+      val components = to-tuple(split(key, ".", 2))
+      if length(components) == 2:
+        val first-component = components[0]
+        match(get-entry(first-component)):
+          (first-table: TomlValue):
+            match(first-table: TomlTable):
+              get?(first-table, components[1])
+            else:
+              fatal("key `%_` is not a table" % [key])
+          (_: False):
+            false
       else:
-        false
+        get-entry(key)
 
     defmethod entries (this) -> Vector<KeyValue<String, TomlValue>>:
       entries

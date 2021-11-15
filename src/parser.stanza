@@ -97,13 +97,28 @@ defn parse-table (parser: Parser) -> KeyValue<String, TomlTable>:
 
   name => table
 
+defn parse-identifer (parser: Parser) -> String:
+  debug("trace: parse-identifer")
+  val key = take-while(parser, is-identifier)
+  if length(key) == 0:
+    error(parser, "Expected key, got: `%~`" % [peek(parser)])
+  key
+
+defn parse-key (parser: Parser) -> String:
+  debug("trace: parse-key")
+  val ident = StringBuffer()
+  print(ident, parse-identifer(parser))
+  while peek(parser) == One('.'):
+    advance(parser)
+    print(ident, '.')
+    print(ident, parse-identifer(parser))
+  to-string(ident)
+
 defn parse-key-value (parser: Parser) -> KeyValue<String, TomlValue>:
   debug("trace: parse-key-value")
   skip-whitespace(parser)
 
-  val key = take-while(parser, is-identifier)
-  if length(key) == 0:
-    error(parser, "Expected key, got: `%~`" % [peek(parser)])
+  val key = parse-key(parser)
 
   skip-whitespace(parser)
   expect(parser, '=')

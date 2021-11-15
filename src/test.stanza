@@ -39,7 +39,8 @@ deftest table-parse:
   <>
   #EXPECT(toml["foo"] as String == "bar")
   #EXPECT(toml["bar"] as Int == 1)
-  #EXPECT((toml["dependencies"] as TomlTable)["stanza-toml"] as String == "git@github.com:tylanphear/stanza-toml")
+  #EXPECT(toml["dependencies.stanza-toml"] as String == "git@github.com:tylanphear/stanza-toml")
+  #EXPECT(toml["dependencies.poet"] as String == "git@github.com:tylanphear/poet")
 
 deftest multiple-tables:
   val toml = table $ parse-file $ \<>
@@ -49,6 +50,18 @@ deftest multiple-tables:
   foo = "bar"
   <>
   #EXPECT(toml["a"] is TomlTable)
-  #EXPECT((toml["a"] as TomlTable)["foo"] as String == "bar")
+  #EXPECT(toml["a.foo"] as String == "bar")
   #EXPECT(toml["b"] is TomlTable)
-  #EXPECT((toml["b"] as TomlTable)["foo"] as String == "bar")
+  #EXPECT(toml["b.foo"] as String == "bar")
+
+deftest dotted-key-value:
+  val toml = table $ parse-file $ "foo.bar.baz = 10\n"
+  #EXPECT(toml["foo"] is TomlTable)
+  #EXPECT(toml["foo.bar.baz"] as Int == 10)
+
+deftest dotted-key-value-in-table:
+  val toml = table $ parse-file $ dedent $ \<>
+    [foo]
+    bar.baz = "Hello, world!"
+  <>
+  #EXPECT(toml["foo.bar.baz"] as String == "Hello, world!")
