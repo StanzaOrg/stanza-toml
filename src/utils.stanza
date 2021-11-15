@@ -13,3 +13,8 @@ public defn is-identifier (c: Char) -> True|False:
 
 public defn is-whitespace (c: Char) -> True|False:
   c == ' ' or c == '\n'
+
+public var DEBUG?: True|False = false
+public defn debug (msg: Printable|String) -> False:
+  if DEBUG?:
+    println(STANDARD-ERROR-STREAM, "debug: %_" % [msg])

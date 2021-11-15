@@ -84,6 +84,7 @@ defn parse-integer (parser: Parser) -> Int:
   to-int!(take-while(parser, is-digit))
 
 defn parse-table (parser: Parser) -> KeyValue<String, TomlTable>:
+  debug("trace: parse-table")
   expect(parser, '[')
   val name = take-while(parser, is-identifier)
   if length(name) == 0:
@@ -98,6 +99,7 @@ defn parse-table (parser: Parser) -> KeyValue<String, TomlTable>:
   name => table
 
 defn parse-key-value (parser: Parser) -> KeyValue<String, TomlValue>:
+  debug("trace: parse-key-value")
   skip-whitespace(parser)
 
   val key = take-while(parser, is-identifier)
@@ -125,6 +127,7 @@ defn parse-key-value (parser: Parser) -> KeyValue<String, TomlValue>:
   key => value
 
 defn parse-table-inner (parser: Parser, table: TomlTable) -> False:
+  debug("trace: parse-table-inner")
   while not at-end(parser) :
     match(peek(parser)):
       (v: One<Char>):
@@ -141,6 +144,7 @@ defn parse-table-inner (parser: Parser, table: TomlTable) -> False:
         error(parser, "Unexpected EOF")
 
 public defn parse-file (content: String) -> TomlFile:
+  debug("trace: parse-file")
   val parser = Parser(content, ParsePosition(), TomlTable())
   parse-table-inner(parser, table(parser))
   TomlFile(table(parser))
