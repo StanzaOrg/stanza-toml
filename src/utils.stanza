@@ -1,0 +1,15 @@
+defpackage toml/utils:
+  import core
+
+public defn is-ascii (c: Char) -> True|False:
+  ('a' <= c and c <= 'z') or
+    ('A' <= c and c <= 'Z')
+
+public defn is-digit (c: Char) -> True|False:
+  '0' <= c and c <= '9'
+
+public defn is-identifier (c: Char) -> True|False:
+  is-ascii(c) or c == '-'
+
+public defn is-whitespace (c: Char) -> True|False:
+  c == ' ' or c == '\n'

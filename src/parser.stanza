@@ -6,6 +6,7 @@ defpackage toml/parser:
   import toml/file
   import toml/pair
   import toml/table
+  import toml/utils
 
 defstruct ParsePosition:
   offset: Int
@@ -70,19 +71,6 @@ defn take-while (parser: Parser, pred: Char -> True|False) -> String:
       }
       $> value-or{_, ""}
   next()
-
-defn is-ascii (c: Char) -> True|False:
-  ('a' <= c and c <= 'z') or
-    ('A' <= c and c <= 'Z')
-
-defn is-digit (c: Char) -> True|False:
-  '0' <= c and c <= '9'
-
-defn is-identifier (c: Char) -> True|False:
-  is-ascii(c) or c == '-'
-
-defn is-whitespace (c: Char) -> True|False:
-  c == ' ' or c == '\n'
 
 defn parse-string (parser: Parser) -> String:
   expect(parser, '"')
