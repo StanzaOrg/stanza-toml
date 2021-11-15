@@ -7,46 +7,48 @@ defpackage toml/test:
   import toml/value
   import toml/file
 
+public defn dedent (str: String) -> String:
+  defn trim-left (s: String):
+    let loop (i = 0):
+      if i < length(s) and s[i] == ' ':
+        loop(i + 1)
+      else:
+        s[i to false]
+  str
+    $> split{_, "\n"}
+    $> seq{trim-left, _}
+    $> string-join{_, "\n"}
+
 deftest parse-str:
-  val table = table(parse-file(\<S>title = "TOML Example"<S>))
+  val table = table(parse-file("title = \"TOML Example\"\n"))
   #EXPECT(length(entries(table)) == 1)
-  #EXPECT(get(table, "title") as String == "TOML Example")
+  #EXPECT(table["title"] as String == "TOML Example")
 
 deftest parse-num:
-  val table = table(parse-file(\<S>title = 10<S>))
+  val table = table(parse-file("title = 10\n"))
   #EXPECT(length(entries(table)) == 1)
-  #EXPECT(get(table, "title") as Int == 10)
-
-deftest to-string:
-  val table = TomlTable $ to-hashtable<String, TomlValue> $ ["name" => "foo"]
-  #EXPECT(to-string(table) == "name = \"foo\"\n")
-
-  val file = TomlFile(table)
-  #EXPECT(to-string(file) == "name = \"foo\"\n")
-
-deftest ser-deser:
-  val file = parse-file("title = \"foo\"\nversion = 10\n")
-  #EXPECT(to-string(file) == "title = \"foo\"\nversion = 10\n")
-
-deftest table-to-string:
-  val table = TomlTable $ [
-    "foo" => "bar",
-    "dependencies" => TomlTable $ [
-      "stanza-toml" => "git@github.com:tylanphear/stanza-toml",
-      "poet"        => "git@github.com:tylanphear/poet"
-    ]
-  ]
-  #EXPECT(to-string(table) == "\
-    foo = \"bar\"\n\
-    [dependencies]\n\
-    stanza-toml = \"git@github.com:tylanphear/stanza-toml\"\n\
-    poet = \"git@github.com:tylanphear/poet\"\n")
+  #EXPECT(table["title"] as Int == 10)
 
 deftest table-parse:
-  val toml = table $ parse-file $ "\
-  foo = \"bar\"\n\
-  [dependencies]\n\
-  stanza-toml = \"git@github.com:tylanphear/stanza-toml\"\n\
-  poet = \"git@github.com:tylanphear/poet\"\n"
+  val toml = table $ parse-file $ dedent $ \<>
+    foo = "bar"
+    bar = 1
+    [dependencies]
+    stanza-toml = "git@github.com:tylanphear/stanza-toml"
+    poet = "git@github.com:tylanphear/poet"
+  <>
   #EXPECT(toml["foo"] as String == "bar")
+  #EXPECT(toml["bar"] as Int == 1)
   #EXPECT((toml["dependencies"] as TomlTable)["stanza-toml"] as String == "git@github.com:tylanphear/stanza-toml")
+
+deftest multiple-tables:
+  val toml = table $ parse-file $ \<>
+  [a]
+  foo = "bar"
+  [b]
+  foo = "bar"
+  <>
+  #EXPECT(toml["a"] is TomlTable)
+  #EXPECT((toml["a"] as TomlTable)["foo"] as String == "bar")
+  #EXPECT(toml["b"] is TomlTable)
+  #EXPECT((toml["b"] as TomlTable)["foo"] as String == "bar")

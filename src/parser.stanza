@@ -93,8 +93,7 @@ defn parse-table (parser: Parser) -> KeyValue<String, TomlTable>:
   expect(parser, '\n')
 
   val table = TomlTable()
-  while peek(parser) != None():
-    parse-table-inner(parser, table)
+  parse-table-inner(parser, table, false)
 
   name => table
 
@@ -119,32 +118,33 @@ defn parse-key-value (parser: Parser) -> KeyValue<String, TomlValue>:
     else:
       error(parser, "Unexpected %~" % [c])
 
-  if not (at-end(parser) or peek(parser) == One('\n')):
-    error(parser, "Expected EOF or newline, got: %~" % [peek(parser)])
-
-  advance(parser)
+  expect(parser, '\n')
 
   key => value
 
-defn parse-table-inner (parser: Parser, table: TomlTable) -> False:
+defn parse-table-inner (parser: Parser, table: TomlTable, root?: True|False) -> False:
   debug("trace: parse-table-inner")
-  while not at-end(parser) :
-    match(peek(parser)):
-      (v: One<Char>):
-        val c = value!(v)
-        if c == '[':
-          insert(table, parse-table(parser))
-        else if is-whitespace(c):
-          skip-whitespace(parser)
-        else if is-identifier(c):
-          insert(table, parse-key-value(parser))
-        else:
-          error(parser, "Unexpected character: '%_'" % [c])
-      (_):
-        error(parser, "Unexpected EOF")
+  label<False> break:
+    while not at-end(parser):
+      match(peek(parser)):
+        (v: One<Char>):
+          val c = value!(v)
+          if c == '[':
+            if not root?:
+              break(false)
+            else:
+              insert(table, parse-table(parser))
+          else if is-whitespace(c):
+            skip-whitespace(parser)
+          else if is-identifier(c):
+            insert(table, parse-key-value(parser))
+          else:
+            error(parser, "Unexpected character: '%_'" % [c])
+        (_):
+          error(parser, "Unexpected EOF")
 
 public defn parse-file (content: String) -> TomlFile:
   debug("trace: parse-file")
   val parser = Parser(content, ParsePosition(), TomlTable())
-  parse-table-inner(parser, table(parser))
+  parse-table-inner(parser, table(parser), true)
   TomlFile(table(parser))
