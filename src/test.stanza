@@ -1,3 +1,4 @@
+#use-added-syntax(tests)
 defpackage toml/test:
   import core
   import collections
@@ -6,39 +7,28 @@ defpackage toml/test:
   import toml/value
   import toml/file
 
-defstruct AssertionFail <: Exception:
-  msg: String
-
-defmethod print (o: OutputStream, e: AssertionFail) -> False:
-  print(o, msg(e))
-
-defn assert-eq! (v1: Equalable, v2: Equalable) -> Void|True:
-  if not v1 == v2:
-    throw(AssertionFail(to-string("assertion failed: `%~` != `%~`" % [v1, v2])))
-  true
-
-defn test-parse-str () -> True|False:
+deftest parse-str:
   val table = table(parse-file(\<S>title = "TOML Example"<S>))
-  assert-eq!(length(entries(table)), 1)
-  assert-eq!(get(table, "title") as String, "TOML Example")
+  #EXPECT(length(entries(table)) == 1)
+  #EXPECT(get(table, "title") as String == "TOML Example")
 
-defn test-parse-num () -> True|False:
+deftest parse-num:
   val table = table(parse-file(\<S>title = 10<S>))
-  assert-eq!(length(entries(table)), 1)
-  assert-eq!(get(table, "title") as Int, 10)
+  #EXPECT(length(entries(table)) == 1)
+  #EXPECT(get(table, "title") as Int == 10)
 
-defn test-to-string () -> True|False:
+deftest to-string:
   val table = TomlTable $ to-hashtable<String, TomlValue> $ ["name" => "foo"]
-  assert-eq!(to-string(table), "name = \"foo\"\n")
+  #EXPECT(to-string(table) == "name = \"foo\"\n")
 
   val file = TomlFile(table)
-  assert-eq!(to-string(file), "name = \"foo\"\n")
+  #EXPECT(to-string(file) == "name = \"foo\"\n")
 
-defn test-ser-deser () -> True|False:
+deftest ser-deser:
   val file = parse-file("title = \"foo\"\nversion = 10\n")
-  assert-eq!(to-string(file), "title = \"foo\"\nversion = 10\n")
+  #EXPECT(to-string(file) == "title = \"foo\"\nversion = 10\n")
 
-defn test-table-to-string () -> True|False:
+deftest table-to-string:
   val table = TomlTable $ [
     "foo" => "bar",
     "dependencies" => TomlTable $ [
@@ -46,37 +36,17 @@ defn test-table-to-string () -> True|False:
       "poet"        => "git@github.com:tylanphear/poet"
     ]
   ]
-  assert-eq!(to-string(table), "\
+  #EXPECT(to-string(table) == "\
     foo = \"bar\"\n\
     [dependencies]\n\
     stanza-toml = \"git@github.com:tylanphear/stanza-toml\"\n\
     poet = \"git@github.com:tylanphear/poet\"\n")
 
-defn test-table-parse () -> True|False:
+deftest table-parse:
   val toml = table $ parse-file $ "\
   foo = \"bar\"\n\
   [dependencies]\n\
   stanza-toml = \"git@github.com:tylanphear/stanza-toml\"\n\
   poet = \"git@github.com:tylanphear/poet\"\n"
-  assert-eq!(get(toml, "foo") as String, "bar")
-  assert-eq!(get(get(toml, "dependencies") as TomlTable, "stanza-toml") as String, "git@github.com:tylanphear/stanza-toml")
-
-val TESTS = [
-  "test-parse-str" => test-parse-str,
-  "test-parse-num" => test-parse-num,
-  "test-to-string" => test-to-string,
-  "test-ser-deser" => test-ser-deser,
-  "test-table-to-string" => test-table-to-string,
-  "test-table-parse" => test-table-parse,
-]
-val PASSES = reduce{_, 0, TESTS} $
-  fn (passes, test):
-    label<Int> return:
-      try:
-        if value(test)():
-          return(passes + 1)
-      catch (e:Exception):
-        println("TEST FAIL: %_: %~" % [key(test), e])
-      passes
-
-println("TESTS PASSED: %_ out of %_" % [PASSES, length(TESTS)])
+  #EXPECT(toml["foo"] as String == "bar")
+  #EXPECT((toml["dependencies"] as TomlTable)["stanza-toml"] as String == "git@github.com:tylanphear/stanza-toml")

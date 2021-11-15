@@ -1,6 +1,6 @@
 include "src/stanza.proj"
 
-build test:
+build-test test:
   inputs:
     toml/test
   o: "build/test"
