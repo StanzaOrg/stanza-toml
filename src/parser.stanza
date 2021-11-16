@@ -18,6 +18,7 @@ defn ParsePosition ():
 
 defstruct Parser:
   content: String
+  file-name: String
   position: ParsePosition with: (setter => set-position)
   table: TomlTable
 
@@ -31,7 +32,7 @@ defn peek (parser: Parser) -> Maybe<Char>:
 
 defn error (parser: Parser, msg: Printable) -> Void:
   val pos = position(parser)
-  fatal("[%~:%~]: error: %~" % [line(pos), column(pos), msg])
+  fatal("[%_:%~:%~]: error: %~" % [file-name(parser), line(pos), column(pos), msg])
 
 defn error (parser: Parser, msg: String) -> Void:
   error(parser, "%_" % [msg])
@@ -180,7 +181,10 @@ defn parse-table-inner (parser: Parser, table: TomlTable, root?: True|False) -> 
           error(parser, "Unexpected EOF")
 
 public defn parse-file (content: String) -> TomlFile:
+  parse-file(content, "<input>")
+
+public defn parse-file (content: String, file-name: String) -> TomlFile:
   debug("trace: parse-file")
-  val parser = Parser(content, ParsePosition(), TomlTable())
+  val parser = Parser(content, file-name, ParsePosition(), TomlTable())
   parse-table-inner(parser, table(parser), true)
   TomlFile(table(parser))
