@@ -18,4 +18,4 @@ defmethod to-seq (f: TomlFile) -> Seq<KeyValue<String, TomlValue>>:
   to-seq(table(f))
 
 defmethod print (o: OutputStream, f: TomlFile) -> False:
-  print(o, table(f))
+  println(o, table(f))
