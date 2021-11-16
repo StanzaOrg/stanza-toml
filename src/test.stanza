@@ -20,17 +20,17 @@ public defn dedent (str: String) -> String:
     $> string-join{_, "\n"}
 
 deftest parse-str:
-  val table = table(parse-file("title = \"TOML Example\"\n"))
+  val table = table(parse-string("title = \"TOML Example\"\n"))
   #EXPECT(length(entries(table)) == 1)
   #EXPECT(table["title"] as String == "TOML Example")
 
 deftest parse-num:
-  val table = table(parse-file("title = 10\n"))
+  val table = table(parse-string("title = 10\n"))
   #EXPECT(length(entries(table)) == 1)
   #EXPECT(table["title"] as Int == 10)
 
 deftest table-parse:
-  val toml = table $ parse-file $ dedent $ \<>
+  val toml = table $ parse-string $ dedent $ \<>
     foo = "bar"
     bar = 1
     [dependencies]
@@ -43,7 +43,7 @@ deftest table-parse:
   #EXPECT(toml["dependencies.poet"] as String == "git@github.com:tylanphear/poet")
 
 deftest multiple-tables:
-  val toml = table $ parse-file $ \<>
+  val toml = table $ parse-string $ \<>
   [a]
   foo = "bar"
   [b]
@@ -55,7 +55,7 @@ deftest multiple-tables:
   #EXPECT(toml["b.foo"] as String == "bar")
 
 deftest dotted-key-value:
-  val toml = table $ parse-file $ dedent $ \<>
+  val toml = table $ parse-string $ dedent $ \<>
     foo.bar.baz = 10
     foo.bar.bang = "20"
   <>
@@ -64,13 +64,13 @@ deftest dotted-key-value:
   #EXPECT(toml["foo.bar.bang"] as String == "20")
 
 deftest dotted-key-value-in-table:
-  val toml = table $ parse-file $ dedent $ \<>
+  val toml = table $ parse-string $ dedent $ \<>
     [foo.bar]
     baz.bang = "Hello, world!"
   <>
   #EXPECT(toml["foo.bar.baz.bang"] as String == "Hello, world!")
 
 deftest inline-table:
-  val toml = table $ parse-file $ "foo = { bar = { baz = 10, bang = \"hello\" } }\n"
+  val toml = table $ parse-string $ "foo = { bar = { baz = 10, bang = \"hello\" } }\n"
   #EXPECT(toml["foo.bar.baz"] as Int == 10)
   #EXPECT(toml["foo.bar.bang"] as String == "hello")

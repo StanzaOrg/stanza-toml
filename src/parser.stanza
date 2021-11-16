@@ -180,10 +180,13 @@ defn parse-table-inner (parser: Parser, table: TomlTable, root?: True|False) -> 
         (_):
           error(parser, "Unexpected EOF")
 
-public defn parse-file (content: String) -> TomlFile:
-  parse-file(content, "<input>")
+public defn parse-string (content: String) -> TomlFile:
+  parse-file("<input>", content)
 
-public defn parse-file (content: String, file-name: String) -> TomlFile:
+public defn parse-file (file-name: String) -> TomlFile:
+  parse-file(file-name, slurp(file-name))
+
+defn parse-file (file-name: String, content: String) -> TomlFile:
   debug("trace: parse-file")
   val parser = Parser(content, file-name, ParsePosition(), TomlTable())
   parse-table-inner(parser, table(parser), true)
