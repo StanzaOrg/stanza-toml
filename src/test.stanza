@@ -29,6 +29,14 @@ deftest parse-num:
   #EXPECT(length(entries(table)) == 1)
   #EXPECT(table["title"] as Int == 10)
 
+deftest parse-quoted-key:
+  val table = table $ parse-string $ dedent $ \<>
+    "hello world" = 10
+    site."google.com" = "https://google.com"
+  <>
+  #EXPECT(table["hello world"] as Int == 10)
+  #EXPECT((table["site"] as TomlTable)["google.com"] as String == "https://google.com")
+
 deftest table-parse:
   val toml = table $ parse-string $ dedent $ \<>
     foo = "bar"

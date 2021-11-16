@@ -60,17 +60,16 @@ defn expect (parser: Parser, value: Char) -> False|Void:
     error(parser, "Expected: `%~`\nGot: `%~`" % [value, peek(parser)])
 
 defn take-while (parser: Parser, pred: Char -> True|False) -> String:
-  defn next () -> String :
-    peek(parser)
-      $> and-then{_, fn (c):
-        if pred(c):
+  val s = StringBuffer()
+  let loop ():
+    match(peek(parser)):
+      (c?: One):
+        if pred(value!(c?)):
           advance(parser)
-          One(append(String([c]), next()))
-        else:
-          None()
-      }
-      $> value-or{_, ""}
-  next()
+          add(s, value!(c?))
+          loop()
+      (_: None): false
+  to-string(s)
 
 defn parse-string (parser: Parser) -> String:
   expect(parser, '"')
@@ -99,17 +98,23 @@ defn parse-identifier (parser: Parser) -> String:
   debug("trace: parse-identifier")
   val key = take-while(parser, is-identifier)
   if length(key) == 0:
-    error(parser, "Expected key, got: `%~`" % [peek(parser)])
+    error(parser, "Expected identifier, got: `%~`" % [peek(parser)])
   key
 
 defn parse-key (parser: Parser) -> String:
   debug("trace: parse-key")
+  defn parse-key-component (parser: Parser) -> String:
+    switch(peek(parser)):
+      One('"'): parse-string(parser)
+      else: parse-identifier(parser)
+
   val ident = StringBuffer()
-  print(ident, parse-identifier(parser))
+  print(ident, parse-key-component(parser))
+
   while peek(parser) == One('.'):
     advance(parser)
     print(ident, '.')
-    print(ident, parse-identifier(parser))
+    print(ident, parse-key-component(parser))
   to-string(ident)
 
 defn parse-inline-table (parser: Parser) -> TomlTable:
@@ -172,7 +177,7 @@ defn parse-table-inner (parser: Parser, table: TomlTable, root?: True|False) -> 
               insert(table, parse-table(parser))
           else if is-whitespace(c):
             skip-whitespace(parser)
-          else if is-identifier(c):
+          else if is-identifier(c) or c == '"':
             insert(table, parse-key-value(parser))
             expect(parser, '\n')
           else:
