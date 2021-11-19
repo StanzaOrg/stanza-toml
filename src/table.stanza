@@ -3,11 +3,13 @@ defpackage toml/table:
   import collections
   import toml/value
   import toml/pair
+  import maybe-utils
 
 public deftype TomlTable <: TomlValue & Seqable<KeyValue<String, TomlValue>>
+public defmulti set (t: TomlTable, key: String, value: TomlValue) -> False
+public defmulti get (t: TomlTable, key: String) -> TomlValue
+public defmulti get? (t: TomlTable, key: String) -> Maybe<TomlValue>
 public defmulti entries (t: TomlTable) -> Vector<KeyValue<String, TomlValue>>
-public defmulti get (t: TomlTable, k: String) -> TomlValue
-public defmulti get? (t: TomlTable, k: String) -> TomlValue|False
 public defmulti insert (t: TomlTable, entry: KeyValue<String, TomlValue>) -> False
 
 public defn TomlTable ():
@@ -19,12 +21,12 @@ public defn TomlTable ():
     add(entries, key => value)
     key-indexes[key] = index
 
-  defn get-entry (key: String) -> TomlValue|False:
+  defn get-entry (key: String) -> Maybe<TomlValue>:
     val index = get?(key-indexes, key)
     match(index: Int):
-      value(entries[index])
+      One(value(entries[index]))
     else:
-      false
+      None()
 
   new TomlTable:
     defmethod insert (this, entry: KeyValue<String, TomlValue>) -> False:
@@ -35,33 +37,33 @@ public defn TomlTable ():
       if length(components) == 2:
         val first-component = components[0]
         match(get-entry(first-component)):
-          (first-table: TomlValue):
-            match(first-table: TomlTable):
-              insert(first-table, components[1] => value(entry))
-            else:
-              fatal("key `%_` is not a table" % [key])
-          (_: False):
+          (first-table?: One<TomlValue>):
+            match(value!(first-table?)):
+              (first-table: TomlTable): insert(first-table, components[1] => value(entry))
+              (_): fatal("key `%_` is not a table" % [key])
+          (_: None):
             val first-table = TomlTable()
             insert(first-table, components[1] => value(entry))
             set-entry(first-component, first-table)
       else:
         set-entry(key(entry), value(entry))
 
-    defmethod get (this, key: String) -> TomlValue:
-      get?(this, key) as TomlValue
+    defmethod set (this, key: String, value: TomlValue) -> False:
+      insert(this, key => value)
 
-    defmethod get? (this, key: String) -> TomlValue|False:
+    defmethod get (this, key: String) -> TomlValue:
+      value!(get?(this, key))
+
+    defmethod get? (this, key: String) -> Maybe<TomlValue>:
       val components = to-tuple(split(key, ".", 2))
       if length(components) == 2:
-        val first-component = components[0]
-        match(get-entry(first-component)):
-          (first-table: TomlValue):
+        get-entry(components[0])
+          $> map{_, fn (first-table: TomlValue):
             match(first-table: TomlTable):
-              get?(first-table, components[1])
+              first-table[components[1]]
             else:
               fatal("key `%_` is not a table" % [key])
-          (_: False):
-            false
+          }
       else:
         get-entry(key)
 
@@ -76,14 +78,3 @@ public defn TomlTable (pairs: Seqable<KeyValue<String, TomlValue>>):
   for pair in pairs do:
     insert(table, pair)
   table
-
-defmethod print (o: OutputStream, f: TomlTable) -> False:
-  var first? = true
-  defn print-kv (kv: KeyValue<String, TomlValue>) -> False:
-    val print* = print when first? else lnprint
-    match(value(kv): TomlTable):
-      print*(o, "%_.%~" % [key(kv), value(kv)])
-    else:
-      print*(o, "%_ = %~" % [key(kv), value(kv)])
-    first? = false
-  do(print-kv, entries(f))
