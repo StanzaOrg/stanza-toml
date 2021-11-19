@@ -1,4 +1,4 @@
-version = "0.2.1"
+version = "0.2.2"
 name = "stanza-toml"
 [dependencies]
-maybe-utils = "tylanphear/maybe-utils|0.0.3"
+maybe-utils = "tylanphear/maybe-utils|0.1.2"
