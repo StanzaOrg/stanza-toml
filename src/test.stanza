@@ -82,3 +82,8 @@ deftest inline-table:
   val toml = table $ parse-string $ "foo = { bar = { baz = 10, bang = \"hello\" } }\n"
   #EXPECT(toml["foo.bar.baz"] as Int == 10)
   #EXPECT(toml["foo.bar.bang"] as String == "hello")
+
+deftest crlf-line-ending:
+  val toml = table $ parse-string $ "foo = \"bar\"\r\nbaz = 10\r\n"
+  #EXPECT(toml["foo"] as String == "bar")
+  #EXPECT(toml["baz"] as Int == 10)
