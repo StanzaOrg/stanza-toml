@@ -12,7 +12,7 @@ public defn is-identifier (c: Char) -> True|False:
   is-ascii(c) or c == '-'
 
 public defn is-whitespace (c: Char) -> True|False:
-  c == ' ' or c == '\n'
+  c == ' ' or c == '\n' or c == '\r'
 
 public var DEBUG?: True|False = false
 public defn debug (msg: Printable|String) -> False:

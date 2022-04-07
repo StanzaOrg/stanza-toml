@@ -127,6 +127,7 @@ defn parse-inline-table (parser: Parser) -> TomlTable:
   expect(parser, '{')
   skip-whitespace(parser)
   if peek(parser) == One('}'):
+    advance(parser)
     TomlTable()
   else:
     val table = TomlTable()
