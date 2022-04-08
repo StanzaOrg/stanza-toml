@@ -91,3 +91,7 @@ deftest crlf-line-ending:
 deftest empty-inline-table:
   val toml = table $ parse-string $ "foo = {}\n"
   #EXPECT(length(entries(toml["foo"] as TomlTable)) == 0)
+
+deftest comments:
+  val toml = table $ parse-string $ "# this is a comment\nfoo = \"bar\"\n"
+  #EXPECT((toml["foo"] as String) == "bar")

@@ -53,6 +53,11 @@ defn skip-whitespace (parser: Parser) -> False:
   take-while(parser, is-whitespace)
   false
 
+defn eat-comment (parser: Parser) -> False:
+  take-while(parser, fn (c): c != '\n' and c != '\r')
+  expect-newline(parser)
+  false
+
 defn expect (parser: Parser, value: Char) -> False|Void:
   if peek(parser) == One(value):
     advance(parser)
@@ -181,6 +186,8 @@ defn parse-table-inner (parser: Parser, table: TomlTable, root?: True|False) -> 
               break(false)
             else:
               insert(table, parse-table(parser))
+          else if c == '#':
+            eat-comment(parser)
           else if is-whitespace(c):
             skip-whitespace(parser)
           else if is-identifier(c) or c == '"':
