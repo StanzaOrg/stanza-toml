@@ -132,3 +132,33 @@ deftest accessors:
   val cnt = length $ entries $ value!(uut-table)
   #EXPECT(cnt == 2)
 
+deftest parse-error-1:
+  try:
+    val data = parse-file("tests/invalid_1.toml")
+    #EXPECT("Reached Invalid Point" == to-string(data))
+  catch (e:TomlParserError):
+    #EXPECT(file-name(e) == "tests/invalid_1.toml")
+    #EXPECT(line(e) == 3)
+  catch (e:Exception):
+    #EXPECT("Wrong Type of Exception" == e)
+
+deftest(errors) table-insert-error:
+  val t = table $ parse-string $ dedent $ \<>
+    name= "no_new_line"
+    version = "0.1.0"<>
+
+  try:
+    insert(t, KeyValue("version", "0.2.0"))
+    #EXPECT("Reached Unexpected Code Position" == "")
+  catch (e:KeyAlreadyExistsError):
+    #EXPECT(key(e) == "version")
+  catch (e:Exception):
+    #EXPECT("Unexpected Exception" == e)
+
+  try:
+    t["version.patch"] = "qwer"
+    #EXPECT("Reached Unexpected Code Position" == "")
+  catch (e:KeyIsNotATableError):
+    #EXPECT(key(e) == "version")
+  catch (e:Exception):
+    #EXPECT("Unexpected Exception" == e)
