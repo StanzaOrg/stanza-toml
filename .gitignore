@@ -1,3 +1,7 @@
-build
+toml-tests
 .slm
 slm.lock
+
+.vscode/
+.envrc
+.stanza
