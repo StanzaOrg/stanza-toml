@@ -4,7 +4,6 @@ defpackage toml/parser:
   import maybe-utils
   import toml/value
   import toml/file
-  import toml/pair
   import toml/table
   import toml/utils
 

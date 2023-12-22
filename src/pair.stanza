@@ -1,8 +1,0 @@
-defpackage toml/pair:
-  import core
-  import toml/value
-  import toml/table
-
-public defstruct TomlPair:
-  key: String
-  value: TomlValue
