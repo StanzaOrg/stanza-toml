@@ -95,3 +95,13 @@ deftest empty-inline-table:
 deftest comments:
   val toml = table $ parse-string $ "# this is a comment\nfoo = \"bar\"\n"
   #EXPECT((toml["foo"] as String) == "bar")
+
+deftest no-newline-at-eof:
+  val t = table $ parse-string $ dedent $ \<>
+  name = "no_new_line"
+  version = "0.1.0"<>
+
+  val name = t["name"] as String
+  #EXPECT(name == "no_new_line")
+  val version = t["version"] as String
+  #EXPECT(version == "0.1.0")
