@@ -69,6 +69,18 @@ defn expect-newline (parser: Parser) -> False|Void:
     advance(parser)
   expect(parser, '\n')
 
+defn expect-newline-or-eof (parser:Parser) -> False|Void:
+  if peek(parser) == One('\r'):
+    advance(parser)
+  match(peek(parser)):
+    (c:One<Char>):
+      if value(c) == '\n':
+        advance(parser)
+      else:
+        error(parser, "Expected: `%~`\nGot: `%~`" % [value, peek(parser)])
+    (x:None):
+      false
+
 defn take-while (parser: Parser, pred: Char -> True|False) -> String:
   val s = StringBuffer()
   let loop ():
@@ -192,7 +204,7 @@ defn parse-table-inner (parser: Parser, table: TomlTable, root?: True|False) -> 
             skip-whitespace(parser)
           else if is-identifier(c) or c == '"':
             insert(table, parse-key-value(parser))
-            expect-newline(parser)
+            expect-newline-or-eof(parser)
           else:
             error(parser, "Unexpected character: '%_'" % [c])
         (_):
