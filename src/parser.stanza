@@ -8,6 +8,15 @@ defpackage toml/parser:
   import toml/table
   import toml/utils
 
+public defstruct TomlParserError <: Exception :
+  file-name:String
+  line:Int
+  column:Int
+  msg:String|Printable
+
+defmethod print (o:OutputStream, e:TomlParserError):
+  print(o, "[%_:%~:%~]: error: %~" % [file-name(e), line(e), column(e), to-string(msg(e))])
+
 defstruct ParsePosition:
   offset: Int
   line: Int
@@ -32,7 +41,7 @@ defn peek (parser: Parser) -> Maybe<Char>:
 
 defn error (parser: Parser, msg: Printable) -> Void:
   val pos = position(parser)
-  fatal("[%_:%~:%~]: error: %~" % [file-name(parser), line(pos), column(pos), msg])
+  throw $ TomlParserError(file-name(parser), line(pos), column(pos), msg)
 
 defn error (parser: Parser, msg: String) -> Void:
   error(parser, "%_" % [msg])

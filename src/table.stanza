@@ -5,6 +5,18 @@ defpackage toml/table:
   import toml/pair
   import maybe-utils
 
+public defstruct KeyAlreadyExistsError <: Exception :
+  key:String
+
+defmethod print (o:OutputStream, e:KeyAlreadyExistsError) :
+  print(o, "key '%_' already exists in table" % [key(e)])
+
+public defstruct KeyIsNotATableError <: Exception :
+  key:String
+
+defmethod print (o:OutputStream, e:KeyIsNotATableError) :
+  print(o, "key '%_' is not a table" % [key(e)])
+
 public deftype TomlTable <: TomlValue & Seqable<KeyValue<String, TomlValue>>
 public defmulti set (t: TomlTable, key: String, value: TomlValue) -> False
 public defmulti get (t: TomlTable, key: String) -> TomlValue
@@ -30,8 +42,8 @@ public defn TomlTable ():
 
   new TomlTable:
     defmethod insert (this, entry: KeyValue<String, TomlValue>) -> False:
-      if contains?(key-indexes, key(entry)):
-        fatal("key `%_` already exists in table" % [key(entry)])
+      if contains?(keys(key-indexes), key(entry)):
+        throw $ KeyAlreadyExistsError(key(entry))
 
       val components = to-tuple(split(key(entry), ".", 2))
       if length(components) == 2:
@@ -40,7 +52,7 @@ public defn TomlTable ():
           (first-table?: One<TomlValue>):
             match(value!(first-table?)):
               (first-table: TomlTable): insert(first-table, components[1] => value(entry))
-              (_): fatal("key `%_` is not a table" % [key])
+              (_): throw $ KeyIsNotATableError(first-component)
           (_: None):
             val first-table = TomlTable()
             insert(first-table, components[1] => value(entry))
@@ -62,7 +74,7 @@ public defn TomlTable ():
             match(first-table: TomlTable):
               first-table[components[1]]
             else:
-              fatal("key `%_` is not a table" % [key])
+              throw $ KeyIsNotATableError(key)
           }
       else:
         get-entry(key)
