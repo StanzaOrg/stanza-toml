@@ -2,7 +2,6 @@ defpackage toml/table:
   import core
   import collections
   import toml/value
-  import toml/pair
   import maybe-utils
 
 public defstruct KeyAlreadyExistsError <: Exception :
@@ -97,6 +96,6 @@ public defn TomlTable (pairs: Seqable<KeyValue<String, TomlValue>>):
   func-name in [get-str?, get-int?, get-table?],
   out-type in [String, Int, TomlTable]
   ):
-  public defn func-name (t:TomlTable, key:String) -> Maybe<out-type> : 
+  public defn func-name (t:TomlTable, key:String) -> Maybe<out-type> :
     get?(t, key) $> map{_, {_ as out-type}}
 

@@ -2,7 +2,6 @@ defpackage toml/file:
   import core
   import collections
   import toml/value
-  import toml/pair
   import toml/table
 
 public deftype TomlFile <: Seqable<KeyValue<String, TomlValue>>
