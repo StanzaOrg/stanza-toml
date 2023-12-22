@@ -2,10 +2,7 @@
 defpackage toml/tests/basic:
   import core
   import collections
-  import toml/table
-  import toml/parser
-  import toml/value
-  import toml/file
+  import toml
 
 public defn dedent (str: String) -> String:
   defn trim-left (s: String):
@@ -122,7 +119,7 @@ deftest accessors:
   val uut-str = get-str?(toml, "foo")
   #EXPECT(uut-str is One)
   #EXPECT(value!(uut-str) == "bar")
-  
+
   val uut-int = get-int?(toml, "bar")
   #EXPECT(uut-int is One)
   #EXPECT(value!(uut-int) == 1)

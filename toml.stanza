@@ -1,0 +1,8 @@
+defpackage toml:
+  import core
+  import collections
+
+  forward toml/file
+  forward toml/parser
+  forward toml/table
+  forward toml/value
