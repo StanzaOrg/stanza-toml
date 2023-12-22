@@ -2,8 +2,9 @@ include? ".slm/stanza.proj"
 pkg-cache: ".slm/pkg-cache"
 
 packages toml/*  defined-in "src/"
+packages toml/tests/*  defined-in "tests/"
 
 build-test test:
   inputs:
-    toml/test
-  o: "build/test"
+    toml/tests/basic
+  o: "toml-tests"

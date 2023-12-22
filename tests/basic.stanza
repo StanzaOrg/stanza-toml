@@ -1,5 +1,5 @@
 #use-added-syntax(tests)
-defpackage toml/test:
+defpackage toml/tests/basic:
   import core
   import collections
   import toml/table
