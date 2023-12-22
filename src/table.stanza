@@ -78,3 +78,13 @@ public defn TomlTable (pairs: Seqable<KeyValue<String, TomlValue>>):
   for pair in pairs do:
     insert(table, pair)
   table
+
+; Utility Functions for accesing data from the table.
+;  These are helpers
+#for (
+  func-name in [get-str?, get-int?, get-table?],
+  out-type in [String, Int, TomlTable]
+  ):
+  public defn func-name (t:TomlTable, key:String) -> Maybe<out-type> : 
+    get?(t, key) $> map{_, {_ as out-type}}
+

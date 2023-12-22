@@ -105,3 +105,30 @@ deftest no-newline-at-eof:
   #EXPECT(name == "no_new_line")
   val version = t["version"] as String
   #EXPECT(version == "0.1.0")
+
+deftest accessors:
+  val toml = table $ parse-string $ dedent $ \<>
+    foo = "bar"
+    bar = 1
+    [dependencies]
+    stanza-toml = "git@github.com:tylanphear/stanza-toml"
+    poet = "git@github.com:tylanphear/poet"
+  <>
+
+  #EXPECT(get-str?(toml, "non-existent") is None)
+  #EXPECT(get-int?(toml, "non-existent") is None)
+  #EXPECT(get-table?(toml, "non-existent") is None)
+
+  val uut-str = get-str?(toml, "foo")
+  #EXPECT(uut-str is One)
+  #EXPECT(value!(uut-str) == "bar")
+  
+  val uut-int = get-int?(toml, "bar")
+  #EXPECT(uut-int is One)
+  #EXPECT(value!(uut-int) == 1)
+
+  val uut-table = get-table?(toml, "dependencies")
+  #EXPECT(uut-table is One)
+  val cnt = length $ entries $ value!(uut-table)
+  #EXPECT(cnt == 2)
+
