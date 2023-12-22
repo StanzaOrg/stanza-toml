@@ -1,4 +1,5 @@
 version = "0.3.5"
 name = "stanza-toml"
 [dependencies]
-maybe-utils = "StanzaOrg/maybe-utils|0.1.4"
+maybe-utils.git = "StanzaOrg/maybe-utils"
+maybe-utils.version = "0.1.4"
