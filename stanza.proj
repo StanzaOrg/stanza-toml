@@ -1,4 +1,7 @@
-include "src/stanza.proj"
+include? ".slm/stanza.proj"
+pkg-cache: ".slm/pkg-cache"
+
+packages toml/*  defined-in "src/"
 
 build-test test:
   inputs:
