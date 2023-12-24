@@ -159,3 +159,9 @@ deftest(errors) table-insert-error:
     #EXPECT(key(e) == "version")
   catch (e:Exception):
     #EXPECT("Unexpected Exception" == e)
+
+deftest inline-table-key-num:
+  ; TODO - this is a bug.
+  val toml = table $ parse-string $ "foo3 = { bar = { baz = 10, bang = \"hello\" } }\n"
+  #EXPECT(toml["foo3.bar.baz"] as Int == 10)
+  #EXPECT(toml["foo3.bar.bang"] as String == "hello")
