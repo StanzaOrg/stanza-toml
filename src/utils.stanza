@@ -9,7 +9,8 @@ public defn is-digit (c: Char) -> True|False:
   '0' <= c and c <= '9'
 
 public defn is-identifier (c: Char) -> True|False:
-  is-ascii(c) or c == '-'
+  ; [A-Za-z0-9_-]
+  is-ascii(c) or is-digit(c) or c == '-' or c == '_'
 
 public defn is-whitespace (c: Char) -> True|False:
   c == ' ' or c == '\n' or c == '\r'
